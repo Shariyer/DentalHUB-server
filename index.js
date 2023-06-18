@@ -93,13 +93,13 @@ async function run() {
       res.send(options);
     });
 
-    app.get("/usersAppointments", jwtVerification, async (req, res) => {
+    app.get("/usersAppointments", async (req, res) => {
       const email = req.query.email;
-      const decodedEmail = req.decoded.email;
-      console.log(email, "received email in query");
-      if (decodedEmail !== email) {
-        return res.status(403).send({ message: "Forbidden Access" });
-      }
+      // const decodedEmail = req.decoded.email;
+      // console.log(email, "received email in query");
+      // if (decodedEmail !== email) {
+      //   return res.status(403).send({ message: "Forbidden Access" });
+      // }
       // console.log(email);
       const query = {
         email: email,
@@ -372,6 +372,24 @@ async function run() {
       console.log(filter);
 
       const result = await contactRequestsCollection.deleteOne(filter);
+      // console.log(result);
+
+      res.send(result);
+    });
+    app.delete("/users/deleteUserAppointment/:id", async (req, res) => {
+      // const decodedEmail = req.decoded.email;
+      // const query = { email: decodedEmail };
+      // const user = await usersCollection.findOne(query).toArray();
+      // if (user.role !== "admin") {
+      //   return res.status(403).send({ message: "forbidden access" });
+      // }
+      // const userApprovalData = req.body;
+      const id = req.params.id;
+
+      const filter = { _id: ObjectId(id) };
+      // console.log(filter);
+
+      const result = await bookingCollection.deleteOne(filter);
       // console.log(result);
 
       res.send(result);
