@@ -52,6 +52,10 @@ async function run() {
       .db("doctors-portal")
       .collection("bookings");
     const usersCollection = client.db("doctors-portal").collection("users");
+    const reviewsCollection = client.db("doctors-portal").collection("reviews");
+    const contactRequestsCollection = client
+      .db("doctors-portal")
+      .collection("contactRequests");
 
     app.get("/appointmentOptions", async (req, res) => {
       const date = req.query.date;
@@ -92,7 +96,7 @@ async function run() {
     app.get("/usersAppointments", jwtVerification, async (req, res) => {
       const email = req.query.email;
       const decodedEmail = req.decoded.email;
-      // console.log(email, decodedEmail, "jkjkjkj");
+      console.log(email, "received email in query");
       if (decodedEmail !== email) {
         return res.status(403).send({ message: "Forbidden Access" });
       }
@@ -101,8 +105,8 @@ async function run() {
         email: email,
       };
       const usersAppointments = await bookingCollection.find(query).toArray();
-      res.send(usersAppointments);
       // console.log(usersAppointments);
+      res.send(usersAppointments);
     });
 
     app.post("/booking", async (req, res) => {
@@ -143,11 +147,13 @@ async function run() {
       res.status(403).send({ accessToken: " " });
     });
 
+    // posting users
     app.post("/users", async (req, res) => {
       const user = req.body;
       const result = await usersCollection.insertOne(user);
       res.send(result);
     });
+    // getting all users
     app.get("/users/userPatients", async (req, res) => {
       // const UserEmail = req.query.email;
       const query = {
@@ -172,32 +178,97 @@ async function run() {
     //   console.log(users);
     // });
 
-    // setting admin role
-    app.get("/users/adminCheck/:id", jwtVerification, async (req, res) => {
+    //  admin role check
+    app.get("/users/adminCheck", jwtVerification, async (req, res) => {
       const decodedEmail = req.decoded.email;
-      const query = { email: decodedEmail };
-      const id = req.params.id;
-      const filter = { _id: ObjectId(id) };
-      // const user = await usersCollection.find(filter).toArray();
-      console.log(user);
-      // if (user.role !== "admin") {
+      const userEmail = req.query.email;
+      console.log(userEmail, decodedEmail);
+      if (decodedEmail === userEmail) {
+        // const email = req.params.email;
+        const query = { email: userEmail };
+        const user = await usersCollection.findOne(query);
+        // console.log(user);
+        res.send({ isAdmin: user?.role === "admin" });
+      } else {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+    });
+    //isApproval Check
+    app.get("/users/approvalCheck", async (req, res) => {
+      // const decodedEmail = req.decoded.email;
+      const userEmail = req.query.email;
+      // console.log(userEmail);
+      // if (decodedEmail === userEmail) {
+      const query = { email: userEmail };
+      const user = await usersCollection.findOne(query);
+      // console.log(user, "approval for");
+      res.send({ isApproval: user?.approval === "approved" });
+      // }
+      // else {
       //   return res.status(403).send({ message: "forbidden access" });
       // }
-      // const id = req.params.id;
-      // const filter = { _id: ObjectId(id) };
-      // const option = { upsert: true };
-      // const updatedDoc = {
-      //   $set: {
-      //     role: "admin",
-      //   },
-      // };
-      // const result = await usersCollection.updateOne(
-      //   filter,
-      //   updatedDoc,
-      //   option
-      // );
-      // res.send(result);
     });
+    // saving reviews
+    app.post("/users/reviews", async (req, res) => {
+      // const decodedEmail = req.decoded.email;
+      const userEmail = req.query.email;
+      const review = req.body;
+      console.log(review, "posted data");
+      if (userEmail) {
+        const result = await reviewsCollection.insertOne(review);
+        res.send(result);
+      } else {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+    });
+    // posting users contact requests
+    app.post("/users/contactRequest", async (req, res) => {
+      // const decodedEmail = req.decoded.email;
+      const userEmail = req.query.email;
+      const contactRequest = req.body;
+      console.log(contactRequest, "posted data");
+      if (userEmail) {
+        const result = await contactRequestsCollection.insertOne(
+          contactRequest
+        );
+        res.send(result);
+      } else {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+    });
+    // getting reviews
+    app.get("/users/myreviews", async (req, res) => {
+      // const decodedEmail = req.decoded.email;
+      const userEmail = req.query.email;
+      // console.log(userEmail, "for reviews");
+
+      if (userEmail) {
+        const query = {
+          email: userEmail,
+        };
+        const result = await reviewsCollection.find(query).toArray();
+        res.send(result);
+      } else {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+    });
+    // getting contact requests
+    app.get("/users/contactRequest", async (req, res) => {
+      // const decodedEmail = req.decoded.email;
+      const userEmail = req.query.email;
+
+      if (userEmail) {
+        const query = {
+          email: userEmail,
+        };
+        const result = await contactRequestsCollection.find(query).toArray();
+        console.log(result, "for contact requests");
+        res.send(result);
+      } else {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+    });
+
     app.patch("/users/updateApproval/:id", async (req, res) => {
       // const decodedEmail = req.decoded.email;
       // const query = { email: decodedEmail };
@@ -223,31 +294,32 @@ async function run() {
       );
       res.send(result);
     });
-    app.patch("/users/vugi/:id", async (req, res) => {
-      // const decodedEmail = req.decoded.email;
-      // const query = { email: decodedEmail };
-      // const user = await usersCollection.findOne(query).toArray();
-      // if (user.role !== "admin") {
-      //   return res.status(403).send({ message: "forbidden access" });
-      // }
-      const userApprovalData = req.body;
-      const id = req.params.id;
+    // app.patch("/users/vugi/:id", async (req, res) => {
+    //   // const decodedEmail = req.decoded.email;
+    //   // const query = { email: decodedEmail };
+    //   // const user = await usersCollection.findOne(query).toArray();
+    //   // if (user.role !== "admin") {
+    //   //   return res.status(403).send({ message: "forbidden access" });
+    //   // }
+    //   const userApprovalData = req.body;
+    //   const id = req.params.id;
 
-      const filter = { _id: ObjectId(id) };
-      // console.log(userApprovalData, filter);
-      const option = { upsert: true };
-      const updatedDoc = {
-        $set: {
-          approval: userApprovalData,
-        },
-      };
-      const result = await usersCollection.updateOne(
-        filter,
-        updatedDoc,
-        option
-      );
-      res.send(result);
-    });
+    //   const filter = { _id: ObjectId(id) };
+    //   // console.log(userApprovalData, filter);
+    //   const option = { upsert: true };
+    //   const updatedDoc = {
+    //     $set: {
+    //       approval: userApprovalData,
+    //     },
+    //   };
+    //   const result = await usersCollection.updateOne(
+    //     filter,
+    //     updatedDoc,
+    //     option
+    //   );
+    //   res.send(result);
+    // });
+    // deleting user
     app.delete("/users/deleteUser/:id", async (req, res) => {
       // const decodedEmail = req.decoded.email;
       // const query = { email: decodedEmail };
@@ -262,6 +334,44 @@ async function run() {
       console.log(filter);
 
       const result = await usersCollection.deleteOne(filter);
+      // console.log(result);
+
+      res.send(result);
+    });
+    // deleting user review
+    app.delete("/reviews/:id", async (req, res) => {
+      // const decodedEmail = req.decoded.email;
+      // const query = { email: decodedEmail };
+      // const user = await usersCollection.findOne(query).toArray();
+      // if (user.role !== "admin") {
+      //   return res.status(403).send({ message: "forbidden access" });
+      // }
+      // const userApprovalData = req.body;
+      const id = req.params.id;
+
+      const filter = { _id: ObjectId(id) };
+      console.log(filter);
+
+      const result = await reviewsCollection.deleteOne(filter);
+      // console.log(result);
+
+      res.send(result);
+    });
+    // deleting contact request
+    app.delete("/users/contactRequest/:id", async (req, res) => {
+      // const decodedEmail = req.decoded.email;
+      // const query = { email: decodedEmail };
+      // const user = await usersCollection.findOne(query).toArray();
+      // if (user.role !== "admin") {
+      //   return res.status(403).send({ message: "forbidden access" });
+      // }
+      // const userApprovalData = req.body;
+      const id = req.params.id;
+
+      const filter = { _id: ObjectId(id) };
+      console.log(filter);
+
+      const result = await contactRequestsCollection.deleteOne(filter);
       // console.log(result);
 
       res.send(result);
