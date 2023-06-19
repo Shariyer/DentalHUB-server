@@ -132,7 +132,7 @@ async function run() {
     // jwt token api
     app.get("/jwt", async (req, res) => {
       const email = req.query.email;
-      console.log(email, "Loged in user email");
+      // console.log(email, "Loged in user email");
       const query = {
         email: email,
       };
@@ -160,7 +160,7 @@ async function run() {
         role: "userPatient",
       };
       const users = await usersCollection.find(query).toArray();
-      console.log(users);
+      // console.log(users);
       res.send(users);
     });
     // admin role check and verify
@@ -182,7 +182,7 @@ async function run() {
     app.get("/users/adminCheck", jwtVerification, async (req, res) => {
       const decodedEmail = req.decoded.email;
       const userEmail = req.query.email;
-      console.log(userEmail, decodedEmail);
+      // console.log(userEmail, decodedEmail);
       if (decodedEmail === userEmail) {
         // const email = req.params.email;
         const query = { email: userEmail };
@@ -213,7 +213,7 @@ async function run() {
       // const decodedEmail = req.decoded.email;
       const userEmail = req.query.email;
       const review = req.body;
-      console.log(review, "posted data");
+      // console.log(review, "posted data");
       if (userEmail) {
         const result = await reviewsCollection.insertOne(review);
         res.send(result);
@@ -269,6 +269,7 @@ async function run() {
       }
     });
 
+    // giving approval to users
     app.patch("/users/updateApproval/:id", async (req, res) => {
       // const decodedEmail = req.decoded.email;
       // const query = { email: decodedEmail };
@@ -292,6 +293,31 @@ async function run() {
         updatedDoc,
         option
       );
+      res.send(result);
+    });
+    // making admin
+    app.patch("/users/adminApproval/:id", async (req, res) => {
+      // const query = { email: decodedEmail };
+      // const user = await usersCollection.findOne(query).toArray();
+      // if (user.role !== "admin") {
+      //   return res.status(403).send({ message: "forbidden access" });
+      // }
+      const userAdminData = req.body;
+      const id = req.params.id;
+      // console.log(userAdminData);
+      const filter = { _id: ObjectId(id) };
+      const option = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          role: userAdminData.role,
+        },
+      };
+      const result = await usersCollection.updateOne(
+        filter,
+        updatedDoc,
+        option
+      );
+      // console.log(result, "for admin");
       res.send(result);
     });
     // app.patch("/users/vugi/:id", async (req, res) => {
